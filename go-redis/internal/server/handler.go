@@ -2,9 +2,9 @@ package server
 
 import (
 	"bufio"
-	"fmt"
 	"go-redis/internal/resp"
 	"net"
+	"strings"
 )
 
 func handleConn(conn net.Conn) {
@@ -19,9 +19,25 @@ func handleConn(conn net.Conn) {
 			return
 		}
 
-		fmt.Println("Command:", cmd)
+		if len(cmd) == 0 {
+			resp.WriteError(writer, "empty command")
+			writer.Flush()
+			continue
+		}
 
-		writer.WriteString("+OK\r\n")
+		command := strings.ToUpper(cmd[0])
+
+		switch command {
+		case "PING":
+			if len(cmd) == 1 {
+				resp.WriteSimpleString(writer, "PONG")
+			} else {
+				resp.WriteSimpleString(writer, cmd[1])
+			}
+		default:
+			resp.WriteError(writer, "unknown command '"+cmd[0]+"'")
+		}
+
 		writer.Flush()
 	}
 }
