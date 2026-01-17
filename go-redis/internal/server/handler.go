@@ -34,6 +34,31 @@ func handleConn(conn net.Conn) {
 			} else {
 				resp.WriteSimpleString(writer, cmd[1])
 			}
+		case "SET":
+			if len(cmd) != 3 {
+				resp.WriteError(writer, "wrong number of arguments for 'get'")
+				break
+			}
+			key := cmd[1]
+			value := cmd[2]
+
+			redisStore.Set(key, value)
+			resp.WriteSimpleString(writer, "OK")
+		case "GET":
+			if len(cmd) != 2 {
+				resp.WriteError(writer, "wrong number of arguments for 'set'")
+				break
+			}
+			key := cmd[1]
+
+			val, ok := redisStore.Get(key)
+			if !ok {
+				resp.WriteBulkString(writer, nil)
+			} else {
+				resp.WriteBulkString(writer, &val)
+			}
+		case "COMMAND":
+			writer.WriteString("*0\r\n")
 		default:
 			resp.WriteError(writer, "unknown command '"+cmd[0]+"'")
 		}

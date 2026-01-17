@@ -2,8 +2,11 @@ package server
 
 import (
 	"fmt"
+	"go-redis/internal/store"
 	"net"
 )
+
+var redisStore = store.New()
 
 func Start(addr string) {
 	ln, err := net.Listen("tcp", addr)
