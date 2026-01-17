@@ -1,15 +1,20 @@
 package store
 
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
 type Store struct {
-	mu   sync.RWMutex
-	data map[string]string
+	mu     sync.RWMutex
+	data   map[string]string
+	expiry map[string]time.Time
 }
 
 func New() *Store {
 	return &Store{
-		data: make(map[string]string),
+		data:   make(map[string]string),
+		expiry: make(map[string]time.Time),
 	}
 }
 

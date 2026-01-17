@@ -30,7 +30,7 @@ func handleConn(conn net.Conn) {
 		switch command {
 		case "PING":
 			if len(cmd) == 1 {
-				resp.WriteSimpleString(writer, "PONG") //implement well
+				resp.WriteSimpleString(writer, "PONG")
 			} else {
 				resp.WriteSimpleString(writer, cmd[1])
 			}
