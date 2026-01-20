@@ -18,10 +18,16 @@ func New() *Store {
 	}
 }
 
-func (s *Store) Set(key, val string) {
+func (s *Store) Set(key, val string, ttlSecond *int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.data[key] = val
+
+	if ttlSecond != nil {
+		s.expiry[key] = time.Now().Add(time.Duration(*ttlSecond) * time.Second)
+	} else {
+		delete(s.expiry, key)
+	}
 }
 
 func (s *Store) Get(key string) (string, bool) {

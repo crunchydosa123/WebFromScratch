@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"go-redis/internal/resp"
 	"net"
+	"strconv"
 	"strings"
 )
 
@@ -42,7 +43,23 @@ func handleConn(conn net.Conn) {
 			key := cmd[1]
 			value := cmd[2]
 
-			redisStore.Set(key, value)
+			var ttl *int = nil
+			if len(cmd) == 5 {
+				if strings.ToUpper(cmd[3]) != "EX" {
+					resp.WriteError(writer, "syntax error")
+					break
+				}
+
+				seconds, err := strconv.Atoi(cmd[4])
+				if err != nil {
+					resp.WriteError(writer, "invalid expire time")
+					break
+				}
+
+				ttl = &seconds
+			}
+
+			redisStore.Set(key, value, ttl)
 			resp.WriteSimpleString(writer, "OK")
 		case "GET":
 			if len(cmd) != 2 {
