@@ -9,7 +9,11 @@ import (
 )
 
 func handleConn(conn net.Conn) {
-	defer conn.Close()
+	isSubscriber := false
+	defer func() {
+		pubSub.UnsubscribeAll(conn)
+		conn.Close()
+	}()
 
 	reader := bufio.NewReader(conn)
 	writer := bufio.NewWriter(conn)
@@ -28,6 +32,15 @@ func handleConn(conn net.Conn) {
 
 		command := strings.ToUpper(cmd[0])
 
+		if isSubscriber &&
+			command != "SUBSCRIBE" &&
+			command != "UNSUBSCRIBE" &&
+			command != "PING" {
+			resp.WriteError(writer, "ERR only (un)subscribe allowed in subscriber mode")
+			writer.Flush()
+			continue
+		}
+
 		switch command {
 		case "PING":
 			if len(cmd) == 1 {
@@ -36,8 +49,8 @@ func handleConn(conn net.Conn) {
 				resp.WriteSimpleString(writer, cmd[1])
 			}
 		case "SET":
-			if len(cmd) != 3 {
-				resp.WriteError(writer, "wrong number of arguments for 'get'")
+			if len(cmd) != 3 && len(cmd) != 5 {
+				resp.WriteError(writer, "wrong number of arguments for 'set'")
 				break
 			}
 			key := cmd[1]
@@ -63,7 +76,7 @@ func handleConn(conn net.Conn) {
 			resp.WriteSimpleString(writer, "OK")
 		case "GET":
 			if len(cmd) != 2 {
-				resp.WriteError(writer, "wrong number of arguments for 'set'")
+				resp.WriteError(writer, "wrong number of arguments for 'get'")
 				break
 			}
 			key := cmd[1]
@@ -74,6 +87,30 @@ func handleConn(conn net.Conn) {
 			} else {
 				resp.WriteBulkString(writer, &val)
 			}
+		case "SUBSCRIBE":
+			if len(cmd) != 2 {
+				resp.WriteError(writer, "wrong number of arguments for 'subscribe'")
+				break
+			}
+
+			channel := cmd[1]
+			pubSub.Subscribe(channel, conn)
+
+			writer.WriteString("*3\r\n")
+			writer.WriteString("$9\r\nsubscribe\r\n")
+			writer.WriteString("$" + strconv.Itoa(len(channel)) + "\r\n" + channel + "\r\n")
+			writer.WriteString(":1\r\n")
+		case "PUBLISH":
+			if len(cmd) != 3 {
+				resp.WriteError(writer, "wrong number of arguments for 'publish'")
+				break
+			}
+
+			channel := cmd[1]
+			message := cmd[2]
+
+			count := pubSub.Publish(channel, message)
+			writer.WriteString(":" + strconv.Itoa(count) + "\r\n") //count needs to be passed as a string
 		case "COMMAND":
 			writer.WriteString("*0\r\n")
 		default:
