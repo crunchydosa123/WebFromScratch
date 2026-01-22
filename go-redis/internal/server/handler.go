@@ -95,6 +95,7 @@ func handleConn(conn net.Conn) {
 
 			channel := cmd[1]
 			pubSub.Subscribe(channel, conn)
+			isSubscriber = true
 
 			writer.WriteString("*3\r\n")
 			writer.WriteString("$9\r\nsubscribe\r\n")
