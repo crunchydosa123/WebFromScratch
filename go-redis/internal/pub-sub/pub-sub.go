@@ -53,6 +53,19 @@ func (ps *PubSub) Publish(channel, message string) int {
 	return len(subs)
 }
 
+func (ps *PubSub) Unsubscribe(channel string, conn net.Conn) int {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+
+	_, ok := ps.channels[channel]
+	if !ok {
+		return 0
+	}
+
+	ps.channels[channel][conn] = false
+	return 1
+}
+
 func writePubSubMessage(conn net.Conn, channel, message string) {
 	writer := bufio.NewWriter(conn)
 

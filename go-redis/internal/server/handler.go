@@ -101,6 +101,21 @@ func handleConn(conn net.Conn) {
 			writer.WriteString("$9\r\nsubscribe\r\n")
 			writer.WriteString("$" + strconv.Itoa(len(channel)) + "\r\n" + channel + "\r\n")
 			writer.WriteString(":1\r\n")
+
+		case "UNSUBSCRIBE":
+			if len(cmd) > 2 {
+				resp.WriteError(writer, "wrong number of arguments for 'unsubscribe'")
+				break
+			}
+
+			channel := cmd[1]
+			pubSub.Unsubscribe(channel, conn)
+			isSubscriber = false
+
+			writer.WriteString("*3\r\n")
+			writer.WriteString("$9\r\nunsubscribe\r\n")
+			writer.WriteString("$" + strconv.Itoa(len(channel)) + "\r\n" + channel + "\r\n")
+			writer.WriteString(":1\r\n")
 		case "PUBLISH":
 			if len(cmd) != 3 {
 				resp.WriteError(writer, "wrong number of arguments for 'publish'")
