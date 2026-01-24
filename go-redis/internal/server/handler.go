@@ -108,14 +108,23 @@ func handleConn(conn net.Conn) {
 				break
 			}
 
-			channel := cmd[1]
-			pubSub.Unsubscribe(channel, conn)
-			isSubscriber = false
+			if len(cmd) == 2 && cmd[1] != "ALL" {
+				channel := cmd[1]
+				remaining := pubSub.Unsubscribe(channel, conn)
 
-			writer.WriteString("*3\r\n")
-			writer.WriteString("$9\r\nunsubscribe\r\n")
-			writer.WriteString("$" + strconv.Itoa(len(channel)) + "\r\n" + channel + "\r\n")
-			writer.WriteString(":1\r\n")
+				writer.WriteString("*3\r\n")
+				writer.WriteString("$11\r\nunsubscribe\r\n")
+				writer.WriteString("$" + strconv.Itoa(len(channel)) + "\r\n" + channel + "\r\n")
+				writer.WriteString(":" + strconv.Itoa(remaining) + "\r\n")
+			}
+
+			if len(cmd) == 2 && cmd[1] == "ALL" {
+				pubSub.UnsubscribeAll(conn)
+				isSubscriber = false
+				writer.WriteString("*3\r\n")
+				writer.WriteString("$9\r\nunsubscribe all\r\n")
+				writer.WriteString(":1\r\n")
+			}
 		case "PUBLISH":
 			if len(cmd) != 3 {
 				resp.WriteError(writer, "wrong number of arguments for 'publish'")
@@ -126,7 +135,7 @@ func handleConn(conn net.Conn) {
 			message := cmd[2]
 
 			count := pubSub.Publish(channel, message)
-			writer.WriteString(":" + strconv.Itoa(count) + "\r\n") //count needs to be passed as a string
+			writer.WriteString(":" + strconv.Itoa(count) + "\r\n")
 		case "COMMAND":
 			writer.WriteString("*0\r\n")
 		default:

@@ -47,7 +47,9 @@ func (ps *PubSub) Publish(channel, message string) int {
 	}
 
 	for conn := range subs {
-		writePubSubMessage(conn, channel, message)
+		if subs[conn] {
+			writePubSubMessage(conn, channel, message)
+		}
 	}
 
 	return len(subs)
@@ -63,7 +65,7 @@ func (ps *PubSub) Unsubscribe(channel string, conn net.Conn) int {
 	}
 
 	ps.channels[channel][conn] = false
-	return 1
+	return ps.countSubscriptions(conn)
 }
 
 func writePubSubMessage(conn net.Conn, channel, message string) {
@@ -76,4 +78,16 @@ func writePubSubMessage(conn net.Conn, channel, message string) {
 	writer.WriteString("$" + strconv.Itoa(len(message)) + "\r\n")
 	writer.WriteString(message + "\r\n")
 	writer.Flush()
+}
+
+func (ps *PubSub) countSubscriptions(conn net.Conn) int {
+	count := 0
+
+	for _, subs := range ps.channels {
+		if subs[conn] {
+			count++
+		}
+	}
+
+	return count
 }
